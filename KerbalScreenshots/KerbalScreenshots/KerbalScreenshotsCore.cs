@@ -7,8 +7,12 @@ namespace KerbalScreenshots
     [KSPAddon(KSPAddon.Startup.AllGameScenes, false)]
     public class KerbalScreenshotsCore : MonoBehaviour
     {
-
-        public static KeyCode screenshotKey { get; set; } = Settings.ScreenshotKey;
+        void Start()
+        {
+            Settings.LoadConfig();
+            Settings.ConfigLoaded = true;
+        }
+        public static KeyCode screenshotKey { get; set; } = KeyCode.F1;
 
         private void Update()
         {
@@ -27,9 +31,18 @@ namespace KerbalScreenshots
                     finalFile = filePath + "kerbalscrn_" + time + ".png";
                 }
                 ScreenCapture.CaptureScreenshot(finalFile);
-                Debug.Log("Screenshot saved to " + finalFile);
+                Log("Kerbal Screenshots: Screenshot captured with " + screenshotKey);
+                Log("Kerbal Screenshots: Screenshot saved to " + finalFile);
             }
-        }   
+        }
+
+        public static void Log(string logMessage)
+        {
+            if (Settings.loggingEnabled)
+            {
+                Debug.Log(logMessage);
+            }
+        }
     }
 }
 

@@ -1,7 +1,9 @@
-﻿using System;
-using System.Globalization;
-using KSP.UI.Screens;
+﻿using KSP.UI.Screens;
+using KSP.UI.Screens.Mapview.MapContextMenuOptions;
+using System;
+using System.Threading.Tasks;
 using UnityEngine;
+using static System.Runtime.CompilerServices.RuntimeHelpers;
 
 // code taken STRAIGHT from physics range extender's source code. so kudos ig
 
@@ -25,6 +27,8 @@ namespace KerbalScreenshots
         private float _windowHeight = 250;
         private Rect _windowRect;
 
+        private bool awaitingInput = false;
+
         private void Awake()
         {
             if (Fetch)
@@ -40,7 +44,6 @@ namespace KerbalScreenshots
             GameEvents.onHideUI.Add(GameUiDisable);
             GameEvents.onShowUI.Add(GameUiEnable);
             _gameUiToggle = true;
-            KerbalScreenshotsCore.screenshotKey = Settings.ScreenshotKey;
         }
 
         private void OnDestroy()
@@ -67,30 +70,86 @@ namespace KerbalScreenshots
 
             DrawTitle();
             line++;
-            DrawSaveButton(line);
+            DrawRebindButton(line);
+            line++;
+            DrawLoggingButton(line);
 
 
             _windowHeight = ContentTop + line * entryHeight + entryHeight + entryHeight;
             _windowRect.height = _windowHeight;
         }
 
-        
-        private void DrawSaveButton(float line)
+
+        private void DrawRebindButton(float line)
         {
-            var saveRect = new Rect(LeftIndent, ContentTop + line * entryHeight, contentWidth / 2, entryHeight);
-            if (GUI.Button(saveRect, "Change screenshot key"))
-                Apply();
+            string buttonText = "Current: " + Settings.ScreenshotKey.ToString() + " (click to set)";
+            var saveRect = new Rect(LeftIndent, ContentTop + line * entryHeight, contentWidth - 2 * LeftIndent, entryHeight);
+            
+            if (GUI.Button(saveRect, buttonText))
+            {
+                awaitingInput = true;
+            }
+
+            if (awaitingInput)
+            {
+                if (Input.anyKeyDown)
+                {
+                    foreach (KeyCode keyCode in System.Enum.GetValues(typeof(KeyCode)))
+                    {
+                        if (Input.GetKey(keyCode))
+                        {
+                            Settings.ScreenshotKey = keyCode;
+                            awaitingInput = false;
+                            Apply();
+                        }
+                    }
+                }
+            }
+        }
+        private void DrawLoggingButton(float line)
+        {
+            string buttonText = Settings.loggingEnabled ? "Disable logging" : "Enable logging";
+            var saveRect = new Rect(LeftIndent, ContentTop + line * entryHeight, contentWidth - 2 * LeftIndent, entryHeight);
+            if (GUI.Button(saveRect, buttonText))
+            {
+                Settings.loggingEnabled = !Settings.loggingEnabled;
+                string which = Settings.loggingEnabled ? "enabled" : "disabled";
+                Debug.Log($"Kerbal Screenshots: Logging {which}");
+                Settings.SaveConfig();
+            }
         }
 
+        public KeyCode Rebind()
+        {
+            bool newKeyFound = false;
+            KeyCode newKey = KeyCode.F1;
+            while (!newKeyFound)
+            {
+                if (Input.anyKeyDown)
+                {
+                    foreach (KeyCode keyCode in System.Enum.GetValues(typeof(KeyCode)))
+                    {
+                        if (Input.GetKey(keyCode))
+                        {
+                            newKeyFound = true;
+                            newKey = keyCode;
+                        }
+                    }
+                }
+            }
+
+            return newKey;
+        }
         public void Apply()
         {
             try
             {
                 KerbalScreenshotsCore.screenshotKey = Settings.ScreenshotKey;
+                KerbalScreenshotsCore.Log("Kerbal Screenshots: Screenshot hotkey set to " + KerbalScreenshotsCore.screenshotKey);
             }
             catch (Exception e)
             {
-                Debug.Log($"Kerbal Screenshots: Could not save new screenshot key!: {e}");
+                KerbalScreenshotsCore.Log($"Kerbal Screenshots: Could not save new screenshot key!: {e}");
             }
 
             Settings.SaveConfig();
@@ -125,13 +184,13 @@ namespace KerbalScreenshots
         private void EnableGui()
         {
             GuiEnabled = true;
-            Debug.Log("Kerbal Screenshots: Showing GUI ('Courtesy' of lisias & Physics Range Extender!)");
+            KerbalScreenshotsCore.Log("Kerbal Screenshots: Showing GUI (''Courtesy'' of lisias & Physics Range Extender!)");
         }
 
         private void DisableGui()
         {
             GuiEnabled = false;
-            Debug.Log("Kerbal Screenshots: Hiding GUI");
+            KerbalScreenshotsCore.Log("Kerbal Screenshots: Hiding GUI");
         }
 
         private void Dummy()
